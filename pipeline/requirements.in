@@ -1,0 +1,6 @@
+cdsapi
+netCDF4
+numpy
+pytest
+scipy
+xarray
