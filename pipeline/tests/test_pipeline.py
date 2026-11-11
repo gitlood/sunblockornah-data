@@ -397,3 +397,30 @@ def test_stale_unreachable_site_fails(monkeypatch):
         raise RuntimeError("cannot fetch")
     monkeypatch.setattr(stale, "fetch_live", down)
     assert stale.main([], now=NOW) == 1
+
+
+# ---- push.sh: data-only orphan on gh-pages ----
+def _git(cwd, *a):
+    import subprocess
+    return subprocess.run(["git", *a], cwd=cwd, check=True, capture_output=True, text=True).stdout
+
+
+def test_push_sh_force_pushes_one_data_only_orphan_to_gh_pages(tmp_path):
+    import subprocess
+    remote = tmp_path / "r.git"
+    _git(tmp_path, "init", "-q", "--bare", str(remote))
+    script = os.path.join(os.path.dirname(__file__), "..", "push.sh")
+    for n in (1, 2):
+        work = tmp_path / f"w{n}"
+        (work / "v1").mkdir(parents=True)
+        (work / "v1" / "cities.json").write_text(f'{{"n":{n}}}')
+        (work / "v1" / "grid.json").write_text("{}")
+        (work / ".nojekyll").write_text("")
+        env = {**os.environ, "GITHUB_TOKEN": "t", "REPO_URL": f"file://{remote}"}
+        subprocess.run(["sh", script], cwd=work, env=env, check=True, capture_output=True)
+    assert _git(remote, "log", "--format=%an|%s", "gh-pages").count("\n") == 1  # one commit
+    assert _git(remote, "log", "--format=%an", "gh-pages").strip() == "github-actions[bot]"
+    assert sorted(_git(remote, "ls-tree", "-r", "--name-only", "gh-pages").split()) == [
+        ".nojekyll", "v1/cities.json", "v1/grid.json"]
+    assert '"n":2' in _git(remote, "show", "gh-pages:v1/cities.json")
+    assert "main" not in _git(remote, "branch", "--list")
