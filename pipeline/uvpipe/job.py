@@ -70,9 +70,9 @@ def acquire(work, attempts=3, now=None):
                 break
             except Exception as e:
                 last = e
-                print(f"fetch attempt {n + 1} failed: {e}", file=sys.stderr)
+                print(f"fetch attempt {n + 1} failed: {type(e).__name__}", file=sys.stderr)
                 time.sleep(60 * (n + 1))
-    raise RuntimeError(f"no CAMS run could be fetched: {last}")
+    raise RuntimeError(f"no CAMS run could be fetched (last error: {type(last).__name__})")
 
 
 def main(argv=None):
@@ -99,7 +99,7 @@ def main(argv=None):
                 print(f"up to date: newest run {label}, published {pub}")
                 return 3
     except Exception as e:
-        print(f"fetch failed: {type(e).__name__}: {e}", file=sys.stderr)
+        print(f"fetch failed: {type(e).__name__}", file=sys.stderr)
         return 1
     try:
         with xr.open_dataset(nc) as ds:
@@ -109,7 +109,7 @@ def main(argv=None):
         print(f"validation failed: {e}", file=sys.stderr)
         return 2
     except Exception as e:
-        print(f"build failed: {type(e).__name__}: {e}", file=sys.stderr)
+        print(f"build failed: {type(e).__name__}", file=sys.stderr)
         return 2
     write_tree(a.out, cities_doc, grid_doc)
     print(f"wrote run {cities_doc['run']} to {a.out}")

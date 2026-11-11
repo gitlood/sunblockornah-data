@@ -7,8 +7,9 @@ them by committing to `main` (served by GitHub Pages). Runs on GitHub-hosted `ub
 - `uv-pipeline.yml`: cron every 3 h plus manual dispatch. `uvpipe.check` (no secrets, no network)
   decides whether to run the full job: a newer CAMS run is expected, published city ids differ
   from `uvpipe/cities.py`, nothing is published, or the `force` input is set. `publish.sh` runs
-  the job (CDSAPI secrets only in that step); `push.sh` commits and pushes with `GITHUB_TOKEN`
-  (`contents: write`, only in that step). A missed cron is picked up on the next tick.
+  the job in the read-only `build` job (CDSAPI secrets only in that step); the `publish` job
+  (`contents: write`, no secrets, no Python) copies the uploaded data files in and `push.sh` makes ONE orphan
+  commit and force-pushes main, so history never grows. A missed cron is picked up on the next tick.
 - `stale-check.yml`: daily; fails (GitHub emails the owner) when live `cities.json` `gen` is over
   18 h old. Test the alarm: Run workflow with `simulate_stale = true`; the run must go red.
 - `ci.yml`: offline tests on pull requests (read-only token, no secrets).

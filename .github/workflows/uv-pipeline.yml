@@ -16,12 +16,15 @@ concurrency:
   group: uv-pipeline
   cancel-in-progress: false
 jobs:
-  publish:
+  build:
+    # Read-only token. Runs the gate and the CAMS job (the only step with secrets).
     if: github.repository == 'gitlood/sunblockornah-data'
     runs-on: ubuntu-latest
     timeout-minutes: 300
     permissions:
-      contents: write
+      contents: read
+    outputs:
+      run: ${{ steps.gate.outputs.run }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -46,8 +49,43 @@ jobs:
           CDSAPI_KEY: ${{ secrets.CDSAPI_KEY }}
           FORCE: ${{ inputs.force }}
         run: pipeline/publish.sh
-      - name: Commit and push data
+      - name: Upload data files only
         if: steps.gate.outputs.run == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: data
+          path: |
+            v1/cities.json
+            v1/grid.json
+            README.md
+            .nojekyll
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    # Write token, no secrets, no pip, no Python: only git and the uploaded data files.
+    needs: build
+    if: needs.build.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: data
+          path: ${{ runner.temp }}/data
+      - name: Copy data files in (fixed names only)
+        run: |
+          D="$RUNNER_TEMP/data"
+          mkdir -p v1
+          cp "$D/v1/cities.json" "$D/v1/grid.json" v1/
+          cp "$D/README.md" "$D/.nojekyll" .
+      - name: Orphan commit and force-push main
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: pipeline/push.sh
