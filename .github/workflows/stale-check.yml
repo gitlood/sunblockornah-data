@@ -1,0 +1,28 @@
+name: Stale data check
+# Fails (GitHub emails the repo owner) when the live cities.json is over 18 h old.
+# Test the alarm: Actions > Stale data check > Run workflow > simulate_stale = true.
+on:
+  schedule:
+    - cron: "43 6 * * *"
+  workflow_dispatch:
+    inputs:
+      simulate_stale:
+        description: "Pretend the live data is 100 h old (the run must fail)"
+        type: boolean
+        default: false
+permissions: {}
+jobs:
+  stale:
+    if: github.repository == 'gitlood/sunblockornah-data'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Check live data age
+        env:
+          SIMULATE: ${{ inputs.simulate_stale }}
+        run: |
+          if [ "$SIMULATE" = "true" ]; then S=--simulate-stale; else S=; fi
+          cd pipeline && python3 -m uvpipe.stale $S
