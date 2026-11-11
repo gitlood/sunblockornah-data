@@ -8,8 +8,11 @@ set -eu
 : "${GITHUB_TOKEN:?GITHUB_TOKEN missing}"
 REPO_URL=${REPO_URL:-https://github.com/${GITHUB_REPOSITORY:?GITHUB_REPOSITORY missing}.git}
 BRANCH=${BRANCH:-gh-pages}
-HDR="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\n')"
-unset GITHUB_TOKEN
+B64=$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\n')
+# The runner masks the token itself but not its base64 form: mask it before it is used anywhere.
+[ -z "${GITHUB_ACTIONS:-}" ] || echo "::add-mask::$B64"
+HDR="AUTHORIZATION: basic $B64"
+unset GITHUB_TOKEN B64
 gitt() { git -c "http.https://github.com/.extraheader=$HDR" "$@"; }
 
 [ -f v1/cities.json ] && [ -f v1/grid.json ] || { echo "data files missing" >&2; exit 1; }

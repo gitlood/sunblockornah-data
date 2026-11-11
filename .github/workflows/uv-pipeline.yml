@@ -20,7 +20,9 @@ jobs:
     # Read-only token. Runs the gate and the CAMS job (the only step with secrets).
     if: github.repository == 'gitlood/sunblockornah-data'
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    # CAMS queue wait is capped at 40 min per attempt (fetch.py); 3 attempts with 15 min
+    # pauses fit in 150 min. A stuck run is killed and the next 3 h tick retries.
+    timeout-minutes: 150
     permissions:
       contents: read
     outputs:

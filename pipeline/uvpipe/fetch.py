@@ -58,7 +58,7 @@ def _client():
     return cdsapi.Client(quiet=True, wait_until_complete=False, delete=False)
 
 
-def fetch_run(run, work_dir, timeout_s=3 * 3600, poll_s=15):
+def fetch_run(run, work_dir, timeout_s=40 * 60, poll_s=15):
     """Download one run and return the path of the extracted netCDF."""
     os.makedirs(work_dir, exist_ok=True)
     zip_path = os.path.join(work_dir, "run.zip")
